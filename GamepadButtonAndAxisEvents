@@ -1,0 +1,146 @@
+# [Title]
+
+## Authors:
+
+- [Sneha Agarwal] ([Microsoft])
+
+## Participate
+- [Issue tracker]
+- [Discussion forum]
+
+## Table of Contents [if the explainer is longer than one printed page]
+
+[You can generate a Table of Contents for markdown documents using a tool like [doctoc](https://github.com/thlorenz/doctoc).]
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+## Introduction
+
+[The current Gamepad API requires applications to repeatedly poll for gamepad input updates, 
+which introduces input latency and increases CPU usage. This proposal introduces event-driven 
+gamepad input handling to mitigate these issues. By firing events when inputs are received, 
+applications can process input with minimal latency and reduced CPU overhead.]
+
+## User-Facing Problem
+
+[The Gamepad API does not natively support event-driven input handling. Applications must poll for updates, which:
+
+- Introduces input latency as polling intervals may not align with input arrival times.
+
+- Increases CPU usage, especially at high polling rates.
+
+- Lacks granularity in handling gamepad input changes efficiently.]
+
+### Goals [or Motivating Use Cases, or Scenarios]
+
+- [- Introduce event-driven input handling for gamepads.
+
+- Reduce input latency by eliminating reliance on polling.
+
+- Minimize CPU usage while maintaining responsiveness.
+
+- Provide flexibility in handling gamepad input events.]
+
+### Non-goals
+
+[- Deprecating the existing polling mechanism.
+- Providing per-frame event guarantees for high-frequency input sources beyond what is necessary for typical game applications.]
+
+## User research
+
+[Research and experimental implementations in Firefox suggest that event-driven input handling improves responsiveness and efficiency.]
+
+## Proposed Approach
+
+[Explain the proposed solution or approach to addressing the identified problem.
+Do not include WebIDL in this section.
+Show example code using your approach.]
+
+[Where necessary, provide links to longer explanations of the relevant pre-existing concepts and API.
+If there is no suitable external documentation, you might like to provide supplementary information as an appendix in this document, and provide an internal link where appropriate.]
+
+[If this is already specced, link to the relevant section of the spec.]
+
+[If spec work is in progress, link to the PR or draft of the spec.]
+
+### Dependencies on non-stable features
+
+[If your proposed solution depends on any other features that haven't been either implemented by
+multiple browser engines or adopted by a standards working group (that is, not just a W3C community
+group), list them here.]
+
+### Solving [goal 1] with this approach
+
+```js
+// Provide example code - not IDL - demonstrating the design of the feature.
+
+// If this API can be used on its own to address a user need,
+// link it back to one of the scenarios in the goals section.
+
+// If you need to show how to get the feature set up
+// (initialized, or using permissions, etc.), include that too.
+```
+
+### Solving [goal 2] with this approach
+
+[If some goals require a suite of interacting APIs, show how they work together to achieve the goals.]
+
+[etc.]
+
+## Alternatives considered
+
+[This should include as many alternatives as you can,
+from high level architectural decisions down to alternative naming choices.]
+
+### [Alternative 1]
+
+[Describe an alternative which was considered,
+and why you decided against it.
+This alternative may have been part of a prior proposal in the same area,
+or it may be new.
+If you did any research in making this decision, discuss it here.]
+
+### [Alternative 2]
+
+[You may not have decided about some alternatives.
+Describe them as open questions here, and adjust the description once you make a decision.]
+
+### [Alternative 3]
+
+[etc.]
+
+## Accessibility, Privacy, and Security Considerations
+
+[Highlight any accessibility, security, and privacy implications that have been taken into account
+during the design process.]
+
+## Stakeholder Feedback / Opposition
+
+[Implementors and other stakeholders may already have publicly stated positions on this work. If you can, list them here with links to evidence as appropriate.]
+
+- [Implementor A] : Positive
+- [Stakeholder B] : No signals
+- [Implementor C] : Negative
+
+[If appropriate, explain the reasons given by other implementors for their concerns.]
+
+## References & acknowledgements
+
+[Your design will change and be informed by many people; acknowledge them in an ongoing way! It helps build community and, as we only get by through the contributions of many, is only fair.]
+
+[Unless you have a specific reason not to, these should be in alphabetical order.]
+
+Many thanks for valuable feedback and advice from:
+
+- [Person 1]
+- [Person 2]
+- [etc.]
+
+Thanks to the following proposals, projects, libraries, frameworks, and languages
+for their work on similar problems that influenced this proposal.
+
+- [Framework 1]
+- [Project 2]
+- [Proposal 3]
+- [etc.]
