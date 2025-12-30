@@ -23,7 +23,7 @@ This document is a starting point for engaging the community and standards bodie
 2. [Definitions](#definitions)
 2. [User-facing problem](#user-facing-problem)  
 3. [Proposed approach](#proposed-approach)
-4. [Example `gamepadrawinputchange` event](#example-rawgamepadinputchange-event)
+4. [Example `gamepadrawinputchange` event](#example-gamepadrawinputchange-event)
 5. [Goals](#goals)
 6. [Non-goals](#non-goals)  
 7. [Developer code sample](#developer-code-sample)
@@ -35,14 +35,9 @@ This document is a starting point for engaging the community and standards bodie
 
 ## Introduction
 
-This explainer proposes an event-driven Gamepad Input API for the web, designed to complement the existing polling-based model by providing an alternative programming paradigm. By enabling input events to be dispatched in response to gamepad state changes detected during browser polling cycles, this API aims to:
+This explainer proposes an event-driven Gamepad Input API for the web, designed to complement the existing polling-based model. By enabling input events to be dispatched in response to changes in gamepad state, this API aims to support low-latency scenarios such as cloud gaming, where timely and reactive input delivery is critical.
 
-- Enable reactive event-driven programming as an alternative to application-level polling via requestAnimationFrame
-- Improve efficiency for scenarios like cloud gaming where gamepad input processing is performance-critical
-
-Note: This initial implementation maintains the browser's existing polling architecture for compatibility. As such, it does not reduce input latency compared to high-frequency polling via getGamepads(). Future work may address latency by converting the browser to interrupt-driven HID report callbacks.
-
-This proposal builds on earlier work by Chromium engineers, which explored event-driven gamepad input handling. (Note: The original proposal is documented in a [Google Doc](https://docs.google.com/document/d/1rnQ1gU0iwPXbO7OvKS6KO9gyfpSdSQvKhK9_OkzUuKE/edit?pli=1&tab=t.0).)
+This proposal builds on earlier work by Chromium engineers, which explored event-driven gamepad input handling. (Note: The original proposal is documented in a [Google Doc.](https://docs.google.com/document/d/1rnQ1gU0iwPXbO7OvKS6KO9gyfpSdSQvKhK9_OkzUuKE/edit?pli=1&tab=t.0).
 
 ## Definitions
 
@@ -50,18 +45,15 @@ This proposal builds on earlier work by Chromium engineers, which explored event
 Each input frame refers to a single timestamped update of a gamepad’s state, typically derived from a HID (Human Interface Device) report, including all button and axis values at that moment in time.
 
 ### GamepadRawInputChange event: 
-An event that represents changes (deltas) to a gamepad's state when a new input frame is received during the browser's polling cycle. While the event is delivered via Mojo push notifications to the renderer, the underlying data collection in the browser process is still polling-based (via DoPoll()), so events are still tied to the browser's polling interval. The event contains indices of which inputs changed, with the complete state accessible via `.gamepad`.
+An event that represents a snapshot of a gamepad’s state at the moment a new input frame is received from the gamepad device. Each event corresponds to a full input report (e.g., a HID report) and contains the complete state of all buttons, axes. This event enables applications to react to input in a timely, event-driven manner, as an alternative to polling via navigator.getGamepads().
 
 ## User-facing problem
 
-The Gamepad API lacks event-driven input handling, requiring applications to poll for input state changes via navigator.getGamepads(). This polling model creates inefficiencies and makes it challenging to achieve optimal responsiveness. Applications must continuously query gamepad state—typically in requestAnimationFrame loops and manually compare the current state against previous snapshots to detect what changed. This approach has a couple drawbacks:
+The Gamepad API lacks event-driven input handling, requiring applications to poll for input state changes. This polling model makes it difficult to achieve low-latency responsiveness, as input changes can be missed between polling intervals. When an application polls at a fixed rate, the average added input delay is approximately half the polling interval. For example, polling at 60 Hz (every ~16.67 ms) introduces an average latency of ~8.33 ms, before the application can even begin to process the input.
 
-- First, it introduces redundant work. The browser already tracks gamepad state changes internally, yet every application must implement its own state comparison logic, duplicating this effort across processes.
-- Second, continuous polling consumes CPU cycles even when no input occurs, and comparing full gamepad state on every frame adds processing overhead. This is particularly problematic on resource-constrained devices or when the UI thread is under heavy load.
+Developers working on latency-sensitive applications, such as cloud gaming platforms, have reported needing to poll at very high frequencies (e.g., every 4 ms) to detect input as quickly as possible. However, even with aggressive polling, scripts may still struggle to react in real time, especially under heavy UI thread load or on resource-constrained devices.
 
-Developers working on latency-sensitive applications, such as cloud gaming platforms, have reported needing to poll at very high frequencies (e.g., every 4 ms) to minimize the delay between input changes and application response. However, even with aggressive application-level polling, there are inherent limitations. The browser itself polls gamepads at regular intervals through its internal input pipeline, and input changes occurring between these browser polling cycles are coalesced before they ever reach the application. This means that regardless of how frequently an application calls navigator.getGamepads(), it cannot observe input changes that occur between the browser's own polling intervals. Additionally, high-frequency polling in requestAnimationFrame loops or tight intervals consumes significant CPU resources, especially under heavy UI thread load or on resource-constrained devices.
-
-An event-driven Gamepad API (similar to existing keyboard and mouse event models) would address these inefficiencies by notifying applications immediately when the browser detects input changes, eliminating the need for continuous manual polling and state comparison. This reduces redundant processing, lowers CPU overhead, and simplifies application code. While this proposal maintains the browser's existing polling architecture and therefore does not eliminate input latency at the system level, it provides a foundation for more efficient input handling and leaves room for future improvements, such as converting to interrupt-driven HID callbacks for true real-time responsiveness.
+An event-driven Gamepad API (similar to existing keyboard and mouse event models) would allow applications to respond immediately to input changes as they occur, reducing the reliance on polling and enabling real-time responsiveness for latency-critical use cases.
 
 ### Developer code sample of existing poll-based API
 ```JS
@@ -89,13 +81,11 @@ window.addEventListener('gamepadconnected', () => {
 ```
 #### Key points:
 - navigator.getGamepads() returns a snapshot of all connected gamepads.
-- The polling loop is driven by `requestAnimationFrame`, typically around 60Hz (matching display refresh rate). Applications poll at ~60Hz via rAF, while devices may report at higher rates (125Hz-1000Hz). However, the browser's internal polling mechanism operates at its own frequency (implementation-dependent), and input occurring between browser polls is coalesced.
-- This mismatch can result in missed input updates, making the 60Hz rate insufficient for latency-critical applications like cloud gaming. 
-- The proposed Event-driven API proposal would allow applications to react at browser polling rate instead of rAF rate (if browser polls faster).
+- The polling loop is driven by requestAnimationFrame, typically around 60Hz (matching display refresh rate), which is much lower than the internal OS poll rate (eg., 250Hz). This mismatch can result in missed input updates, making the 60Hz rate insufficient for latency-critical applications like cloud gaming.
 
 ## Goals
 
-Improve gamepad input efficiency and developer experience by eliminating redundant state comparison in the renderer and providing an event-driven API with pre-calculated deltas, while maintaining backward compatibility with existing polling-based workflows.
+Reduce input latency by moving away from constant polling and introducing event-driven input handling.
 
 ## Non-goals
 
@@ -103,11 +93,7 @@ Improve gamepad input efficiency and developer experience by eliminating redunda
 
 - Additionally, this proposal does not currently address input alignment or event coalescing. Prior work on high-frequency input APIs, particularly the Pointer Events API has demonstrated the importance of these mechanisms for latency-sensitive use cases. For instance, the [`pointerrawupdate`](https://developer.mozilla.org/en-US/docs/Web/API/Element/pointerrawupdate_event) event was introduced to provide low-latency input delivery, and it is complemented by the [`getCoalescedEvents()`](https://developer.mozilla.org/en-US/docs/Web/API/PointerEvent/getCoalescedEvents) method, which exposes intermediate pointer updates that occur between animation frames. Together, these features help align input processing with rendering, improving visual smoothness and reducing jitter.
 
-In contrast, this proposal for `gamepadrawinputchange` delivers events based on the browser's gamepad polling cycle. At this stage, the browser process still polls gamepads at regular intervals (via DoPoll()), which means events represent the state at each polling interval rather than individual HID reports. This approach:
-
-- Maintains compatibility with existing polling infrastructure.
-- Provides delta information to reduce JavaScript processing overhead.
-- Enables event-driven handling as an alternative to getGamepads() polling in the renderer.
+In contrast, this proposal for `gamepadrawinputchange` intentionally omits alignment and coalescing in its initial design. At this stage, we've intentionally scoped this proposal to deliver immediate, per-HID-report events without adding alignment or coalescing mechanisms. This is both to reduce complexity up front and to validate the value of the raw event model for latency-sensitive use cases.
 
 That said, we recognize that high-frequency gamepad inputs could eventually require similar treatment to pointer events. This proposal is intended as a foundational step, and we explicitly leave room for future evolution. For further background, we recommend reviewing [prior discussions on event-driven gamepad APIs](https://github.com/w3c/gamepad/issues/4#issuecomment-894460031).
 
@@ -227,7 +213,7 @@ window.ongamepadconnected = (connectEvent) => {
 ```
 
 ## Alternatives considered
-`gamepadinputchange` event: Similar to `gamepadrawinputchange` event but instead the `getCoalescedEvents()` method is used to return a sequence of events that have been coalesced (combined) together.  While `gamepadrawinputchange` reduces the number of events by coalescing them, this approach introduces latency and may result in missed intermediate states, making it unsuitable for scenarios requiring immediate responsiveness. This event was proposed in the [Original Proposal](https://docs.google.com/document/d/1rnQ1gU0iwPXbO7OvKS6KO9gyfpSdSQvKhK9_OkzUuKE/edit?pli=1&tab=t.0).
+`gamepadinputchange` event: Similar to `rawgamepadinputchange` event but instead the `getCoalescedEvents()` method is used to return a sequence of events that have been coalesced (combined) together.  While `gamepadinputchange` reduces the number of events by coalescing them, this approach introduces latency and may result in missed intermediate states, making it unsuitable for scenarios requiring immediate responsiveness. This event was proposed in the [Original Proposal](https://docs.google.com/document/d/1rnQ1gU0iwPXbO7OvKS6KO9gyfpSdSQvKhK9_OkzUuKE/edit?pli=1&tab=t.0).
 
 ## Accessibility, privacy, and security considerations
 To prevent abuse and fingerprinting, a ["gamepad user gesture"](https://www.w3.org/TR/gamepad/#dfn-gamepad-user-gesture) will be required before `gamepadrawinputchange` events start firing (e.g., pressing a button).
